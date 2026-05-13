@@ -1,0 +1,13 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+.next/
+dist/
+postgres_data/
+npm-cache/
+*.db
+*.sqlite
+*.sqlite3
+.DS_Store
