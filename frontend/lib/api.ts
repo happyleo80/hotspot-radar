@@ -41,9 +41,16 @@ export type Resonance = {
   topics: Topic[];
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+function getApiBase() {
+  if (process.env.NEXT_PUBLIC_API_BASE) return process.env.NEXT_PUBLIC_API_BASE;
+  if (typeof window !== "undefined") {
+    return `${window.location.protocol}//${window.location.hostname}:8000`;
+  }
+  return "http://localhost:8000";
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const API_BASE = getApiBase();
   const res = await fetch(`${API_BASE}${path}`, { ...init, cache: "no-store" });
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
   return res.json();
