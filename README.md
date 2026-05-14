@@ -26,6 +26,7 @@ docker-compose up --build
 - 每日 Markdown 简报生成。
 - CSV 导入与 CSV/Markdown 导出。
 - Chrome 插件补采：用户点击采集当前页可见 DOM，预览后确认上传。
+- 飞书账号登录：生产环境可开启飞书 OAuth，未登录用户无法访问业务 API。
 
 ## API 路由
 
@@ -56,6 +57,35 @@ AI 分析：
 - `GET /api/export/csv`
 - `GET /api/export/excel`
 - `GET /api/export/markdown`
+
+认证：
+
+- `GET /api/auth/config`
+- `GET /api/auth/login-url`
+- `GET /api/auth/feishu/callback`
+- `GET /api/auth/me`
+
+## 飞书登录配置
+
+本地开发默认 `AUTH_REQUIRED=false`，不强制登录。部署到飞书工作台或服务器时，建议开启飞书 OAuth：
+
+```bash
+AUTH_REQUIRED=true
+AUTH_SESSION_SECRET=一段足够长的随机字符串
+FRONTEND_URL=http://服务器IP:3000
+FEISHU_APP_ID=cli_xxx
+FEISHU_APP_SECRET=xxx
+FEISHU_REDIRECT_URI=http://服务器IP:8000/api/auth/feishu/callback
+CORS_ORIGINS=http://服务器IP:3000,http://localhost:3000,http://127.0.0.1:3000
+```
+
+飞书开放平台应用里需要把 `FEISHU_REDIRECT_URI` 配到网页应用的重定向 URL 中。登录流程为：
+
+1. 前端展示“飞书账号登录”。
+2. 后端生成飞书授权地址。
+3. 飞书回调 `/api/auth/feishu/callback`。
+4. 后端换取飞书用户信息并生成本站会话 token。
+5. 前端保存 token，后续请求自动带 `Authorization: Bearer ...`。
 
 ## 第三方 API 接入方式
 
