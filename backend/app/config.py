@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     feishu_redirect_uri: str | None = None
 
     class Config:
-        env_file = ".env"
+        env_file = (".env", "../.env")
         extra = "ignore"
 
 
