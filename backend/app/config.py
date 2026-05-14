@@ -12,6 +12,12 @@ class Settings(BaseSettings):
     alapi_key: str | None = None
     tophub_api_key: str | None = None
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+    frontend_url: str = "http://localhost:3000"
+    auth_required: bool = False
+    auth_session_secret: str = "change-me-in-production"
+    feishu_app_id: str | None = None
+    feishu_app_secret: str | None = None
+    feishu_redirect_uri: str | None = None
 
     class Config:
         env_file = ".env"
