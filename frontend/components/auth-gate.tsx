@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LogIn, LogOut, ShieldCheck } from "lucide-react";
+import { LogIn, ShieldCheck } from "lucide-react";
 import { api, AuthUser, clearAuthToken, getAuthToken, setAuthToken } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { UserWatermark } from "@/components/user-watermark";
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
@@ -44,11 +45,6 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     window.location.href = result.url;
   }
 
-  function logout() {
-    clearAuthToken();
-    setUser(null);
-  }
-
   if (loading) {
     return <AuthShell title="正在校验登录状态" description="正在连接飞书身份服务..." />;
   }
@@ -74,16 +70,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {user && required && (
-        <div className="fixed right-4 top-4 z-20 flex items-center gap-2 rounded-md border border-line bg-white/90 px-3 py-2 text-xs text-ink/70 shadow-soft backdrop-blur">
-          <ShieldCheck size={14} className="text-teal" />
-          <span>{user.name}</span>
-          <button onClick={logout} className="text-ink/45 hover:text-coral" title="退出登录">
-            <LogOut size={14} />
-          </button>
-        </div>
-      )}
       {children}
+      <UserWatermark user={user} />
     </>
   );
 }

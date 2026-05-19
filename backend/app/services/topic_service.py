@@ -1,5 +1,5 @@
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
 
 from sqlalchemy import case, desc, func, or_
@@ -113,7 +113,12 @@ def list_topics(db: Session, platform: str | None = None, limit: int = 50) -> li
     query = db.query(Topic).options(joinedload(Topic.analyses))
     if platform:
         query = query.filter(Topic.platform == platform)
-    return query.order_by(_source_priority(), desc(Topic.heat_score), Topic.rank.asc()).limit(limit).all()
+    latest_collected_at = query.with_entities(func.max(Topic.collected_at)).scalar()
+    if latest_collected_at:
+        query = query.filter(Topic.collected_at >= latest_collected_at - timedelta(minutes=45))
+    if platform:
+        return query.order_by(_source_priority(), Topic.rank.asc().nullslast(), desc(Topic.heat_score)).limit(limit).all()
+    return query.order_by(_source_priority(), desc(Topic.heat_score), Topic.rank.asc().nullslast()).limit(limit).all()
 
 
 def _source_priority():
@@ -182,7 +187,11 @@ def resonance_topics(db: Session) -> list[dict]:
 
 
 def _resonance_source_rows(db: Session) -> list[Topic]:
-    query = db.query(Topic).order_by(_source_priority(), desc(Topic.heat_score), Topic.rank.asc())
+    query = db.query(Topic)
+    latest_collected_at = query.with_entities(func.max(Topic.collected_at)).scalar()
+    if latest_collected_at:
+        query = query.filter(Topic.collected_at >= latest_collected_at - timedelta(minutes=45))
+    query = query.order_by(_source_priority(), desc(Topic.heat_score), Topic.rank.asc())
     real_rows = query.filter(Topic.source_type != "mock").limit(240).all()
     if real_rows:
         return real_rows
@@ -412,8 +421,9 @@ def _topic_summary(topic: Topic) -> dict:
 
 
 def rising_topics(db: Session, limit: int = 20) -> list[Topic]:
+    query = _recent_topics_query(db)
     return (
-        db.query(Topic)
+        query
         .order_by(desc(Topic.heat_score), Topic.rank.asc())
         .limit(limit)
         .all()
@@ -422,7 +432,7 @@ def rising_topics(db: Session, limit: int = 20) -> list[Topic]:
 
 def high_value_topics(db: Session, limit: int = 20) -> list[Topic]:
     rows = (
-        db.query(Topic)
+        _recent_topics_query(db)
         .options(joinedload(Topic.analyses))
         .order_by(_source_priority(), desc(Topic.heat_score), Topic.rank.asc())
         .limit(300)
@@ -445,7 +455,7 @@ def high_value_topics(db: Session, limit: int = 20) -> list[Topic]:
 
 def high_risk_topics(db: Session, limit: int = 20) -> list[Topic]:
     rows = (
-        db.query(Topic)
+        _recent_topics_query(db)
         .options(joinedload(Topic.analyses))
         .order_by(_source_priority(), desc(Topic.heat_score), Topic.rank.asc())
         .limit(300)
@@ -469,6 +479,14 @@ def high_risk_topics(db: Session, limit: int = 20) -> list[Topic]:
             break
 
     return selected
+
+
+def _recent_topics_query(db: Session):
+    query = db.query(Topic)
+    latest_collected_at = query.with_entities(func.max(Topic.collected_at)).scalar()
+    if latest_collected_at:
+        query = query.filter(Topic.collected_at >= latest_collected_at - timedelta(minutes=45))
+    return query
 
 
 def _risk_topics_are_related(left: Topic, right: Topic) -> bool:

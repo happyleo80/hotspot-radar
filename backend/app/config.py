@@ -8,6 +8,19 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     openai_base_url: str | None = None
     openai_model: str = "gpt-4o-mini"
+    llm_provider: str = "deepseek"
+    llm_api_key: str | None = None
+    llm_base_url: str | None = None
+    llm_model: str | None = None
+    embedding_provider: str = "mock"
+    embedding_api_key: str | None = None
+    embedding_base_url: str = "https://open.bigmodel.cn/api/paas/v4/embeddings"
+    embedding_model: str = "embedding-3"
+    embedding_dimension: int = 1024
+    embedding_enabled: bool = False
+    deepseek_api_key: str | None = None
+    deepseek_base_url: str = "https://api.deepseek.com"
+    deepseek_model: str = "deepseek-chat"
     tianapi_key: str | None = None
     alapi_key: str | None = None
     tophub_api_key: str | None = None
@@ -18,6 +31,11 @@ class Settings(BaseSettings):
     feishu_app_id: str | None = None
     feishu_app_secret: str | None = None
     feishu_redirect_uri: str | None = None
+    admin_open_ids: str = ""
+    ai_topic_cost_points: int = 10
+    digitaling_daily_import_enabled: bool = True
+    digitaling_import_limit: int = 100
+    hotspot_refresh_interval_minutes: int = 30
 
     class Config:
         env_file = (".env", "../.env")
