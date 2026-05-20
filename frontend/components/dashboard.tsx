@@ -78,18 +78,30 @@ export function Dashboard() {
   async function analyzeTopic(topic: Topic) {
     if (isForbiddenTopic(topic.title)) return;
     setBusy(`analyze-${topic.id}`);
-    const result = await api.recommend(topic.id);
-    setRecommendation(result);
-    setAnalyzedTopicIds((prev) => new Set(prev).add(topic.id));
-    await load();
-    setBusy("");
+    setRefreshMessage("");
+    try {
+      const result = await api.recommend(topic.id);
+      setRecommendation(result);
+      setAnalyzedTopicIds((prev) => new Set(prev).add(topic.id));
+      await load();
+    } catch (error) {
+      setRefreshMessage(`AI建议生成失败：${friendlyApiError(error)}`);
+    } finally {
+      setBusy("");
+    }
   }
 
   async function generateBrief() {
     setBusy("brief");
-    const result = await api.brief();
-    setBrief(result.markdown);
-    setBusy("");
+    setRefreshMessage("");
+    try {
+      const result = await api.brief();
+      setBrief(result.markdown);
+    } catch (error) {
+      setRefreshMessage(`每日简报生成失败：${friendlyApiError(error)}`);
+    } finally {
+      setBusy("");
+    }
   }
 
   async function refreshPageData() {
@@ -370,6 +382,15 @@ function highRiskTitle(title: string) {
 
 function platformName(platform: string) {
   return platforms.find((item) => item.id === platform)?.label || platform;
+}
+
+function friendlyApiError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error || "未知错误");
+  if (message.startsWith("API_UNREACHABLE:")) {
+    return `暂时无法连接后端服务（${message.replace("API_UNREACHABLE:", "")}），请确认 8000 端口已启动并开放。`;
+  }
+  if (message === "AUTH_REQUIRED") return "登录已失效，请重新登录。";
+  return message;
 }
 
 function latestCollectedAtText(rows: Topic[]) {

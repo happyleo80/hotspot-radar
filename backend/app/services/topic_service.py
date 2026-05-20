@@ -98,8 +98,14 @@ def collect_platform(db: Session, platform: str) -> dict:
         source = "api" if items else "mock"
     if not items:
         items = mock_items(platform)
+    batch_at = datetime.utcnow()
+    normalized_titles: set[str] = set()
     for item in items:
+        item["platform"] = platform
+        item["collected_at"] = batch_at
+        normalized_titles.add(normalize_title(item["title"]))
         upsert_topic(db, item)
+    _expire_platform_topics(db, platform, normalized_titles, batch_at)
     db.commit()
     return {"platform": platform, "count": len(items), "source": source}
 
@@ -107,6 +113,19 @@ def collect_platform(db: Session, platform: str) -> dict:
 def collect_all(db: Session) -> dict:
     result = [collect_platform(db, platform) for platform in PLATFORMS]
     return {"platforms": result, "total": sum(row["count"] for row in result)}
+
+
+def _expire_platform_topics(db: Session, platform: str, current_titles: set[str], batch_at: datetime) -> None:
+    if not current_titles:
+        return
+    db.query(Topic).filter(
+        Topic.platform == platform,
+        ~Topic.normalized_title.in_(current_titles),
+        Topic.collected_at >= batch_at - timedelta(hours=6),
+    ).update(
+        {Topic.collected_at: batch_at - timedelta(days=2)},
+        synchronize_session=False,
+    )
 
 
 def list_topics(db: Session, platform: str | None = None, limit: int = 50) -> list[Topic]:
