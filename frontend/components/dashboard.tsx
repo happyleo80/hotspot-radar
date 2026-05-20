@@ -68,6 +68,7 @@ export function Dashboard() {
       setRefreshMessage(`热点列表接口暂时异常，已用跨平台共振话题兜底展示。${topicResult.error}`);
     }
     setLoading(false);
+    return fallbackTopics;
   }
 
   useEffect(() => {
@@ -95,12 +96,10 @@ export function Dashboard() {
     setBusy("refresh");
     setRefreshMessage("");
     try {
-      const result = await api.collectAll();
-      await load();
-      setRefreshMessage(`已采集最新热点：${result.total} 条。`);
+      const rows = await load();
+      setRefreshMessage(`已刷新缓存数据：${rows.length} 条。${latestCollectedAtText(rows)}`);
     } catch {
-      await load();
-      setRefreshMessage("暂时无法连接热点采集服务，请确认后端 8000 端口已开放，并已使用最新代码重新构建。");
+      setRefreshMessage("暂时无法读取热点缓存，请确认后端 8000 端口已开放，并已使用最新代码重新构建。");
     }
     setBusy("");
   }
@@ -163,7 +162,7 @@ export function Dashboard() {
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
                 <Button className="h-11 bg-blue-600 px-6 hover:bg-blue-700" onClick={refreshPageData} disabled={!!busy}>
-                  <RefreshCw size={17} /> 刷新页面数据
+                  <RefreshCw size={17} /> 刷新缓存数据
                 </Button>
                 <Button className="h-11 bg-white px-6 text-slate-800 hover:bg-slate-50" onClick={generateBrief} disabled={busy === "brief"}>
                   <Download size={17} /> 生成每日简报
@@ -371,6 +370,12 @@ function highRiskTitle(title: string) {
 
 function platformName(platform: string) {
   return platforms.find((item) => item.id === platform)?.label || platform;
+}
+
+function latestCollectedAtText(rows: Topic[]) {
+  const timestamps = rows.map((topic) => new Date(topic.collected_at).getTime()).filter((value) => Number.isFinite(value));
+  if (!timestamps.length) return "等待后台定时采集。";
+  return `最近采集：${new Date(Math.max(...timestamps)).toLocaleString()}。`;
 }
 
 function topicsFromResonance(rows: Resonance[], platform: string) {
