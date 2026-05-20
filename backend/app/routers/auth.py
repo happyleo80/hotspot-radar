@@ -1,6 +1,7 @@
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Header, HTTPException, Query
+from pydantic import BaseModel
 from fastapi.responses import RedirectResponse
 
 from app.config import get_settings, is_auth_required
@@ -14,6 +15,11 @@ from app.services.auth_service import (
 )
 
 router = APIRouter(prefix="/api/auth", tags=["登录认证"])
+
+
+class AdminLoginIn(BaseModel):
+    username: str
+    password: str
 
 
 @router.get("/config")
@@ -30,6 +36,15 @@ def auth_config():
 def login_url(frontend_redirect: str | None = None):
     state = create_state(frontend_redirect)
     return {"url": build_feishu_login_url(state)}
+
+
+@router.post("/admin-login")
+def admin_login(payload: AdminLoginIn):
+    settings = get_settings()
+    if payload.username != settings.admin_username or payload.password != settings.admin_password:
+        raise HTTPException(status_code=401, detail="Invalid admin credentials")
+    token = create_session({"open_id": f"admin:{payload.username}", "union_id": None, "name": payload.username, "admin_login": True})
+    return {"auth_token": token, "user": {"name": payload.username, "open_id": f"admin:{payload.username}"}}
 
 
 @router.get("/feishu/callback")

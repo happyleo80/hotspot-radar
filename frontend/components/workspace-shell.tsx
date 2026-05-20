@@ -5,7 +5,7 @@ import { BarChart3, BrainCircuit, FileText, Folder, Home, LogOut, Search, Settin
 import { api, clearAuthToken, UserAccount } from "@/lib/api";
 
 const navItems = [
-  { href: "/", label: "工作台", icon: <Home size={19} /> },
+  { href: "", label: "工作台", icon: <Home size={19} /> },
   { href: "/topics-library", label: "我的话题库", icon: <Folder size={19} /> },
   { href: "/cases-admin", label: "AI营销知识", icon: <BrainCircuit size={19} /> },
   { href: "/records", label: "生成记录", icon: <FileText size={19} /> },
@@ -39,14 +39,21 @@ export function WorkspaceShell({ active, children }: { active: string; children:
         </div>
         <nav className="mt-4 space-y-2 px-3 text-sm">
           {navItems.map((item) => (
-            <a
-              key={item.href}
-              className={`flex h-12 items-center gap-3 rounded-xl px-5 font-medium ${active === item.href ? "bg-blue-50 text-blue-600" : "text-slate-700 hover:bg-slate-50"}`}
-              href={item.href}
-            >
-              {item.icon}
-              {item.label}
-            </a>
+            item.href ? (
+              <a
+                key={item.label}
+                className={`flex h-12 items-center gap-3 rounded-xl px-5 font-medium ${active === item.href ? "bg-blue-50 text-blue-600" : "text-slate-700 hover:bg-slate-50"}`}
+                href={item.href}
+              >
+                {item.icon}
+                {item.label}
+              </a>
+            ) : (
+              <div key={item.label} className="flex h-12 items-center gap-3 rounded-xl bg-blue-50 px-5 font-medium text-blue-600">
+                {item.icon}
+                {item.label}
+              </div>
+            )
           ))}
         </nav>
       </aside>

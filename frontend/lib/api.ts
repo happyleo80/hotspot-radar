@@ -259,7 +259,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
   const token = getAuthToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
-  const res = await fetch(`${API_BASE}${path}`, { ...init, headers, cache: "no-store" });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, { ...init, headers, cache: "no-store" });
+  } catch (error) {
+    throw new Error(`API_UNREACHABLE:${API_BASE}`);
+  }
   if (res.status === 401) {
     clearAuthToken();
     throw new Error("AUTH_REQUIRED");
@@ -282,6 +287,12 @@ export const api = {
   authConfig: () => request<{ auth_required: boolean; feishu_configured: boolean }>("/api/auth/config"),
   me: () => request<{ authenticated: boolean; user: AuthUser }>("/api/auth/me"),
   loginUrl: (frontendRedirect: string) => request<{ url: string }>(`/api/auth/login-url?frontend_redirect=${encodeURIComponent(frontendRedirect)}`),
+  adminLogin: (payload: { username: string; password: string }) =>
+    request<{ auth_token: string; user: AuthUser }>("/api/auth/admin-login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }),
   account: () => request<UserAccount>("/api/users/me"),
   myPermissions: () => request<{ role: string; permissions: string[] }>("/api/users/me/permissions"),
   myRecommendations: () => request<TopicRecommendation[]>("/api/users/me/recommendations"),

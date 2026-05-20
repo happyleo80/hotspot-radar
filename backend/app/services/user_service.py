@@ -58,9 +58,10 @@ def get_or_create_user(db: Session, user_payload: dict) -> UserAccount:
     now = datetime.utcnow()
     admin_ids = _admin_ids()
     is_env_admin = open_id in admin_ids or user_payload.get("union_id") in admin_ids
+    is_admin_login = bool(user_payload.get("admin_login"))
     is_first_user = db.query(UserAccount).count() == 0
     auth_required = is_auth_required()
-    default_role = "super_admin" if (not auth_required) or is_env_admin or (is_first_user and not admin_ids) else "viewer"
+    default_role = "super_admin" if (not auth_required) or is_env_admin or is_admin_login or (is_first_user and not admin_ids) else "viewer"
 
     if user is None:
         user = UserAccount(
@@ -84,11 +85,13 @@ def get_or_create_user(db: Session, user_payload: dict) -> UserAccount:
     user.name = user_payload.get("name") or user.name
     user.email = user_payload.get("email") or user.email
     user.avatar_url = user_payload.get("avatar_url") or user.avatar_url
-    if ((not is_auth_required()) or is_env_admin) and user.role not in {"admin", "super_admin"}:
+    if ((not is_auth_required()) or is_env_admin or is_admin_login) and user.role not in {"admin", "super_admin"}:
         user.role = "super_admin"
         user.permissions = ",".join(ROLE_PERMISSIONS["super_admin"])
     if not user.role:
         user.role = "viewer"
+    if (user.points_balance or 0) <= 0 and (user.total_points_used or 0) == 0:
+        user.points_balance = 1000
     user.last_seen_at = now
     db.commit()
     db.refresh(user)

@@ -3,16 +3,67 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowLeft, BrainCircuit, ChartNoAxesColumnIncreasing, Database, KeyRound, ShieldCheck, Sparkles, Users } from "lucide-react";
-import { AuthGate } from "@/components/auth-gate";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AdminSettings, AiUsage, api, PermissionOptions, TopicRecommendation, UserAccount } from "@/lib/api";
+import { AdminSettings, AiUsage, api, PermissionOptions, setAuthToken, TopicRecommendation, UserAccount } from "@/lib/api";
 
 export default function AdminPage() {
   return (
-    <AuthGate>
+    <AdminPasswordGate>
       <AdminContent />
-    </AuthGate>
+    </AdminPasswordGate>
+  );
+}
+
+function AdminPasswordGate({ children }: { children: React.ReactNode }) {
+  const [username, setUsername] = useState("admin");
+  const [password, setPassword] = useState("");
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setReady(window.sessionStorage.getItem("hotspot_admin_logged_in") === "true");
+  }, []);
+
+  async function login() {
+    setBusy(true);
+    setError("");
+    try {
+      const result = await api.adminLogin({ username, password });
+      setAuthToken(result.auth_token);
+      window.sessionStorage.setItem("hotspot_admin_logged_in", "true");
+      setReady(true);
+    } catch {
+      setError("用户名或密码不正确。");
+    }
+    setBusy(false);
+  }
+
+  if (ready) return <>{children}</>;
+
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-[#f7f9fc] px-4 text-slate-950">
+      <Card className="w-full max-w-md rounded-2xl border-[#e4eaf3] bg-white shadow-sm">
+        <CardContent className="space-y-5 p-8">
+          <div>
+            <p className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-blue-600"><ShieldCheck size={14} /> Admin Control Center</p>
+            <h1 className="mt-4 text-3xl font-semibold tracking-normal">管理后台登录</h1>
+            <p className="mt-2 text-sm leading-6 text-slate-500">请使用管理账号进入用户、积分和模型配置后台。</p>
+          </div>
+          <label className="block text-sm font-medium text-slate-600">
+            用户名
+            <input className="mt-2 h-11 w-full rounded-lg border border-[#dde4ef] px-3 outline-none focus:border-blue-500" value={username} onChange={(event) => setUsername(event.target.value)} />
+          </label>
+          <label className="block text-sm font-medium text-slate-600">
+            密码
+            <input className="mt-2 h-11 w-full rounded-lg border border-[#dde4ef] px-3 outline-none focus:border-blue-500" value={password} onChange={(event) => setPassword(event.target.value)} type="password" onKeyDown={(event) => { if (event.key === "Enter") login(); }} />
+          </label>
+          {error ? <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p> : null}
+          <Button className="h-11 w-full bg-blue-600 hover:bg-blue-700" onClick={login} disabled={busy}>{busy ? "正在登录..." : "进入管理后台"}</Button>
+        </CardContent>
+      </Card>
+    </main>
   );
 }
 

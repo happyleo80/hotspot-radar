@@ -79,12 +79,16 @@ def ensure_runtime_schema() -> None:
         user_columns = {
             "role": "VARCHAR(40) DEFAULT 'viewer'",
             "permissions": "TEXT",
+            "points_balance": "INTEGER DEFAULT 1000",
+            "total_points_used": "INTEGER DEFAULT 0",
         }
         existing_users = {row[1] for row in conn.execute(text("PRAGMA table_info(user_accounts)"))}
         for name, definition in user_columns.items():
             if name not in existing_users:
                 conn.execute(text(f"ALTER TABLE user_accounts ADD COLUMN {name} {definition}"))
         conn.execute(text("UPDATE user_accounts SET role = 'viewer' WHERE role IS NULL OR role = ''"))
+        conn.execute(text("UPDATE user_accounts SET points_balance = 1000 WHERE (points_balance IS NULL OR points_balance = 0) AND (total_points_used IS NULL OR total_points_used = 0)"))
+        conn.execute(text("UPDATE user_accounts SET total_points_used = 0 WHERE total_points_used IS NULL"))
         usage_columns = {
             "points_charged": "INTEGER",
             "duration_ms": "INTEGER",

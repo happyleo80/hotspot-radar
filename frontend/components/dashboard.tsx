@@ -46,11 +46,11 @@ export function Dashboard() {
   async function load(platform = active) {
     setLoading(true);
     const [topicRows, resonanceRows, risingRows, valueRows, riskRows, accountRow, recommendationRows] = await Promise.all([
-      api.topics(platform === "all" ? undefined : platform),
-      api.resonance(),
-      api.rising(),
-      api.highValue(),
-      api.highRisk(),
+      api.topics(platform === "all" ? undefined : platform).catch(() => []),
+      api.resonance().catch(() => []),
+      api.rising().catch(() => []),
+      api.highValue().catch(() => []),
+      api.highRisk().catch(() => []),
       api.account().catch(() => null),
       api.myRecommendations().catch(() => [])
     ]);
@@ -94,7 +94,7 @@ export function Dashboard() {
       setRefreshMessage(`已采集最新热点：${result.total} 条。`);
     } catch {
       await load();
-      setRefreshMessage("当前账号没有手动采集权限，已重新加载最近半小时缓存。");
+      setRefreshMessage("暂时无法连接热点采集服务，请确认后端 8000 端口已开放，并已使用最新代码重新构建。");
     }
     setBusy("");
   }
@@ -117,7 +117,7 @@ export function Dashboard() {
           </div>
         </div>
         <nav className="mt-4 space-y-2 px-3 text-sm">
-          <SideLink active icon={<Home size={19} />} label="工作台" href="/" />
+          <SideLink active icon={<Home size={19} />} label="工作台" />
           <SideLink icon={<Folder size={19} />} label="我的话题库" href="/topics-library" />
           <SideLink icon={<BrainCircuit size={19} />} label="AI营销知识" href="/cases-admin" />
           <SideLink icon={<FileText size={19} />} label="生成记录" href="/records" />
@@ -300,9 +300,13 @@ export function Dashboard() {
   );
 }
 
-function SideLink({ icon, label, href, active }: { icon: React.ReactNode; label: string; href: string; active?: boolean }) {
+function SideLink({ icon, label, href, active }: { icon: React.ReactNode; label: string; href?: string; active?: boolean }) {
+  const className = `flex h-12 items-center gap-3 rounded-xl px-5 font-medium ${active ? "bg-blue-50 text-blue-600" : "text-slate-700 hover:bg-slate-50"}`;
+  if (!href) {
+    return <div className={className}>{icon}{label}</div>;
+  }
   return (
-    <a className={`flex h-12 items-center gap-3 rounded-xl px-5 font-medium ${active ? "bg-blue-50 text-blue-600" : "text-slate-700 hover:bg-slate-50"}`} href={href}>
+    <a className={className} href={href}>
       {icon}
       {label}
     </a>
