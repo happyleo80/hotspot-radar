@@ -36,6 +36,11 @@ def get_resonance(db: Session = Depends(get_db)):
     return topic_service.resonance_topics(db)
 
 
+@router.get("/stats")
+def get_topic_stats(db: Session = Depends(get_db)):
+    return topic_service.topic_stats(db)
+
+
 @router.get("/platform/{platform}", response_model=list[TopicOut])
 def get_platform_topics(platform: str, db: Session = Depends(get_db)):
     return topic_service.list_topics(db, platform, 50)

@@ -42,6 +42,12 @@ export type Resonance = {
   topics: Topic[];
 };
 
+export type TopicStats = {
+  total: number;
+  platform_counts: Record<string, number>;
+  latest_collected_at: string | null;
+};
+
 export type AuthUser = {
   open_id?: string;
   union_id?: string;
@@ -275,6 +281,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   topics: (platform?: string) => request<Topic[]>(`/api/topics${platform ? `?platform=${platform}` : ""}`),
+  topicStats: () => request<TopicStats>("/api/topics/stats"),
   topic: (id: string) => request<Topic>(`/api/topics/${id}`),
   resonance: () => request<Resonance[]>("/api/topics/resonance"),
   rising: () => request<Topic[]>("/api/topics/rising"),

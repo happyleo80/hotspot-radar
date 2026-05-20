@@ -14,7 +14,7 @@ import {
   Settings,
   Sparkles
 } from "lucide-react";
-import { api, clearAuthToken, Resonance, Topic, TopicRecommendation, UserAccount } from "@/lib/api";
+import { api, clearAuthToken, Resonance, Topic, TopicRecommendation, TopicStats, UserAccount } from "@/lib/api";
 import { formatHeat } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,6 +31,7 @@ const platforms = [
 export function Dashboard() {
   const [active, setActive] = useState("all");
   const [topics, setTopics] = useState<Topic[]>([]);
+  const [topicStats, setTopicStats] = useState<TopicStats | null>(null);
   const [resonance, setResonance] = useState<Resonance[]>([]);
   const [rising, setRising] = useState<Topic[]>([]);
   const [highValue, setHighValue] = useState<Topic[]>([]);
@@ -45,10 +46,11 @@ export function Dashboard() {
 
   async function load(platform = active) {
     setLoading(true);
-    const [topicResult, resonanceRows, risingRows, valueRows, riskRows, accountRow, recommendationRows] = await Promise.all([
+    const [topicResult, statsRow, resonanceRows, risingRows, valueRows, riskRows, accountRow, recommendationRows] = await Promise.all([
       api.topics(platform === "all" ? undefined : platform)
         .then((rows) => ({ rows, error: "" }))
         .catch((error) => ({ rows: [] as Topic[], error: error instanceof Error ? error.message : "热点列表接口异常" })),
+      api.topicStats().catch(() => null),
       api.resonance().catch(() => []),
       api.rising().catch(() => []),
       api.highValue().catch(() => []),
@@ -58,6 +60,7 @@ export function Dashboard() {
     ]);
     const fallbackTopics = topicResult.rows.length ? topicResult.rows : topicsFromResonance(resonanceRows, platform);
     setTopics(fallbackTopics);
+    setTopicStats(statsRow);
     setResonance(resonanceRows);
     setRising(risingRows);
     setHighValue(valueRows);
@@ -68,7 +71,7 @@ export function Dashboard() {
       setRefreshMessage(`热点列表接口暂时异常，已用跨平台共振话题兜底展示。${topicResult.error}`);
     }
     setLoading(false);
-    return fallbackTopics;
+    return { topics: fallbackTopics, stats: statsRow };
   }
 
   useEffect(() => {
@@ -98,7 +101,9 @@ export function Dashboard() {
       const result = await api.brief();
       setBrief(result.markdown);
     } catch (error) {
-      setRefreshMessage(`每日简报生成失败：${friendlyApiError(error)}`);
+      const fallback = buildCachedBrief(topics, resonance, highValue, highRisk, topicStats);
+      setBrief(fallback);
+      setRefreshMessage(`后端每日简报接口暂时不可用，已基于当前缓存生成本地简报。${friendlyApiError(error)}`);
     } finally {
       setBusy("");
     }
@@ -108,8 +113,8 @@ export function Dashboard() {
     setBusy("refresh");
     setRefreshMessage("");
     try {
-      const rows = await load();
-      setRefreshMessage(`已刷新缓存数据：${rows.length} 条。${latestCollectedAtText(rows)}`);
+      const result = await load();
+      setRefreshMessage(`已刷新缓存数据：${topicStatsText(result.stats, result.topics)}。${latestCollectedAtText(result.stats, result.topics)}`);
     } catch {
       setRefreshMessage("暂时无法读取热点缓存，请确认后端 8000 端口已开放，并已使用最新代码重新构建。");
     }
@@ -189,7 +194,7 @@ export function Dashboard() {
           </section>
 
           <section className="mt-5 grid gap-4 md:grid-cols-4">
-            <Metric title="今日热点" value={topics.length} icon={<Folder size={24} />} />
+            <Metric title="今日热点" value={topicStats?.total ?? topics.length} icon={<Folder size={24} />} />
             <Metric title="跨平台共振" value={resonance.length} icon={<BarChart3 size={24} />} />
             <Metric title="剩余额度" value={account?.points_balance ?? 0} suffix="/ 积分" icon={<Sparkles size={24} />} />
             <Metric title="累计消耗" value={account?.total_points_used ?? 0} suffix="/ 积分" icon={<Sparkles size={24} />} />
@@ -393,10 +398,50 @@ function friendlyApiError(error: unknown) {
   return message;
 }
 
-function latestCollectedAtText(rows: Topic[]) {
+function topicStatsText(stats: TopicStats | null, rows: Topic[]) {
+  if (!stats) return `${rows.length} 条`;
+  const platformText = platforms
+    .filter((platform) => platform.id !== "all")
+    .map((platform) => `${platform.label}${stats.platform_counts[platform.id] || 0}`)
+    .join(" / ");
+  return `${stats.total} 条（${platformText}）`;
+}
+
+function latestCollectedAtText(stats: TopicStats | null, rows: Topic[]) {
+  if (stats?.latest_collected_at) return `最近采集：${new Date(stats.latest_collected_at).toLocaleString()}。`;
   const timestamps = rows.map((topic) => new Date(topic.collected_at).getTime()).filter((value) => Number.isFinite(value));
   if (!timestamps.length) return "等待后台定时采集。";
   return `最近采集：${new Date(Math.max(...timestamps)).toLocaleString()}。`;
+}
+
+function buildCachedBrief(topics: Topic[], resonance: Resonance[], highValue: Topic[], highRisk: Topic[], stats: TopicStats | null) {
+  const now = new Date().toLocaleString();
+  const lines = [
+    "# 今日热点营销简报",
+    "",
+    `生成时间：${now}`,
+    "",
+    "## 今日热点概览",
+    `- 当前热点缓存共 ${stats?.total ?? topics.length} 条。`,
+    `- 识别跨平台共振话题 ${resonance.length} 个。`,
+    `- 当前可借势话题 ${highValue.length} 个，需谨慎话题 ${highRisk.length} 个。`,
+    "",
+    "## 今日全网声量 Top 10",
+    ...topics.slice(0, 10).map((topic, index) => `${index + 1}. ${topic.title}（${platformName(topic.platform)}，热度 ${Math.round(topic.heat_score || 0)}）`),
+    "",
+    "## 跨平台共振观察",
+    ...(resonance.slice(0, 5).map((item) => `- ${item.title}：覆盖 ${item.platform_count} 个平台，关联平台：${item.platforms.map(platformName).join("、")}。`) || []),
+    "",
+    "## 适合社媒借势的话题",
+    ...(highValue.slice(0, 6).map((topic) => `- ${topic.title}（${platformName(topic.platform)}）：适合从生活方式、场景化内容或用户共创角度切入。`) || []),
+    "",
+    "## 不建议跟进的话题",
+    ...(highRisk.slice(0, 6).map((topic) => `- ${topic.title}（${platformName(topic.platform)}）：存在品牌安全不确定性，建议只做监测。`) || []),
+    "",
+    "## 提醒",
+    "- 这是前端基于当前缓存生成的兜底简报；后端服务恢复后，可重新生成完整简报。"
+  ];
+  return lines.join("\n");
 }
 
 function topicsFromResonance(rows: Resonance[], platform: string) {

@@ -39,7 +39,7 @@ def latest_or_create_analysis(db: Session, topic: Topic) -> TopicAIAnalysis:
     return latest[0] if latest else analyze_topic(db, topic)
 
 
-def generate_brief(db: Session, topics: list[Topic], resonance: list[dict]) -> str:
+def generate_brief(db: Session, topics: list[Topic], resonance: list[dict], observed_total: int | None = None) -> str:
     top = topics[:10]
     good = high_value_topics(db, limit=8)
     risky = high_risk_topics(db, limit=8)
@@ -50,7 +50,7 @@ def generate_brief(db: Session, topics: list[Topic], resonance: list[dict]) -> s
         f"生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M')}",
         "",
         "## 今日热点概览",
-        f"- 共监测 {len(topics)} 条热点，覆盖微博、抖音、小红书、知乎、B站。",
+        f"- 共监测 {observed_total or len(topics)} 条热点，覆盖微博、抖音、小红书、知乎、B站。",
         f"- 识别跨平台共振话题 {len(resonance)} 个，其中 {len(top_resonance)} 个适合作为今日观察重点。",
         f"- 筛出适合社媒借势的话题 {len(good)} 个，高风险或需谨慎监测的话题 {len(risky)} 个。",
         "",

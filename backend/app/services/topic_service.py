@@ -115,6 +115,22 @@ def collect_all(db: Session) -> dict:
     return {"platforms": result, "total": sum(row["count"] for row in result)}
 
 
+def topic_stats(db: Session) -> dict:
+    counts: dict[str, int] = {}
+    latest_seen = None
+    for platform in PLATFORMS:
+        rows = list_topics(db, platform, 100)
+        counts[platform] = len(rows)
+        for topic in rows:
+            if latest_seen is None or topic.collected_at > latest_seen:
+                latest_seen = topic.collected_at
+    return {
+        "total": sum(counts.values()),
+        "platform_counts": counts,
+        "latest_collected_at": latest_seen,
+    }
+
+
 def _expire_platform_topics(db: Session, platform: str, current_titles: set[str], batch_at: datetime) -> None:
     if not current_titles:
         return
