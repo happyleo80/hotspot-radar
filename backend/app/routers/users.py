@@ -26,6 +26,10 @@ class EmbeddingTestIn(BaseModel):
     text: str = "测试向量模型连接"
 
 
+class FavoriteUpdateIn(BaseModel):
+    is_favorite: bool
+
+
 @router.get("/me", response_model=UserAccountOut)
 def my_account(request: Request, db: Session = Depends(get_db)):
     return get_or_create_user(db, user_from_request(request))
@@ -47,6 +51,27 @@ def my_recommendations(request: Request, db: Session = Depends(get_db)):
         .limit(100)
         .all()
     )
+
+
+@router.patch("/me/recommendations/{recommendation_id}/favorite", response_model=TopicRecommendationOut)
+def update_my_recommendation_favorite(
+    recommendation_id: int,
+    payload: FavoriteUpdateIn,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    user = get_or_create_user(db, user_from_request(request))
+    recommendation = (
+        db.query(TopicRecommendation)
+        .filter(TopicRecommendation.id == recommendation_id, TopicRecommendation.user_id == user.id)
+        .first()
+    )
+    if not recommendation:
+        raise HTTPException(status_code=404, detail="Recommendation not found")
+    recommendation.is_favorite = 1 if payload.is_favorite else 0
+    db.commit()
+    db.refresh(recommendation)
+    return recommendation
 
 
 @router.get("/me/usage", response_model=list[AiUsageOut])

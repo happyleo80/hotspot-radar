@@ -79,6 +79,7 @@ class TopicRecommendationOut(BaseModel):
     recommendation: str
     points_used: int
     model: str
+    is_favorite: int = 0
     created_at: datetime
     case_refs: list[TopicRecommendationCaseRefOut] = []
 

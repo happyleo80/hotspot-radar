@@ -136,6 +136,7 @@ class TopicRecommendation(Base):
     recommendation: Mapped[str] = mapped_column(Text)
     points_used: Mapped[int] = mapped_column(Integer, default=0)
     model: Mapped[str] = mapped_column(String(80), default="deepseek-chat")
+    is_favorite: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     user: Mapped[UserAccount] = relationship(back_populates="recommendations")

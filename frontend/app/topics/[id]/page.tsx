@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, ExternalLink, Sparkles, TrendingUp } from "lucide-react";
 import { AuthGate } from "@/components/auth-gate";
 import { WorkspaceShell } from "@/components/workspace-shell";
+import { RecommendationPreview } from "@/components/recommendation-preview";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { api, Topic, TopicRecommendation } from "@/lib/api";
 import { formatHeat } from "@/lib/utils";
+import { highRiskTitle, isForbiddenTopic } from "@/lib/topic-policy";
 
 export default function TopicPage({ params }: { params: { id: string } }) {
   return (
@@ -127,7 +129,23 @@ function TopicDetail({ topicId }: { topicId: string }) {
                 该话题涉及政治、公共治理、执法司法或其他敏感公共议题，系统不提供营销借势分析。
               </p>
             ) : recommendation ? (
-              <pre className="max-h-[620px] overflow-auto whitespace-pre-wrap rounded-xl bg-slate-950 p-5 text-sm leading-7 text-white">{recommendation.recommendation}</pre>
+              <div className="space-y-4">
+                <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm leading-6 text-blue-700">
+                  已调用 AI营销知识库生成建议，引用案例 {recommendation.case_refs?.length || 0} 个。
+                </div>
+                {(recommendation.case_refs || []).length ? (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {recommendation.case_refs?.map((item) => (
+                      <div key={item.id} className="rounded-xl border border-[#edf1f6] p-4 text-sm">
+                        <div className="font-semibold text-slate-950">案例 #{item.case_id} · 匹配 {Math.round((item.match_score || 0) * 100)}%</div>
+                        {item.match_reason ? <p className="mt-2 text-slate-600">{item.match_reason}</p> : null}
+                        {item.used_insight ? <p className="mt-2 text-xs leading-5 text-slate-500">策略启发：{item.used_insight}</p> : null}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+                <RecommendationPreview text={recommendation.recommendation} />
+              </div>
             ) : analysis ? (
               <div className="grid gap-4 text-sm leading-6 md:grid-cols-2">
                 <Field title="一句话摘要" value={analysis.summary} />
@@ -173,14 +191,6 @@ function Field({ title, value }: { title: string; value: string }) {
       <p className="mt-1 text-slate-900">{value}</p>
     </div>
   );
-}
-
-function isForbiddenTopic(title: string) {
-  return /(政治|政府|外交|总统|首相|大选|选举|议会|国会|战争|军事|军方|军演|国防|制裁|领土|边境|台湾|香港|澳门|涉政|官员|纪委|反腐|法院|检察院|公安|警方|警察|刑拘|逮捕|判刑|死刑|枪击|恐袭|暴乱|抗议|游行|特朗普|拜登|普京|泽连斯基|以色列|伊朗|乌克兰|俄罗斯|巴勒斯坦|中美)/.test(title);
-}
-
-function highRiskTitle(title: string) {
-  return /(起诉|退款|投诉|偷拍|违法|谣言|造谣|被罚|翻车|争议|道歉)/.test(title);
 }
 
 function platformName(platform: string) {

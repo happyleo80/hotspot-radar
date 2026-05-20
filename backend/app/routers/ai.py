@@ -5,6 +5,7 @@ from app.database import get_db
 from app.routers.schemas import AnalysisOut, TopicRecommendationOut
 from app.services.case_service import recommend_for_topic
 from app.services.ai_service import analyze_topic, generate_brief
+from app.services.topic_policy import is_forbidden_topic
 from app.services.topic_service import get_topic, list_topics, resonance_topics, topic_stats
 from app.services.user_service import get_or_create_user, user_from_request
 
@@ -16,6 +17,8 @@ def analyze(topic_id: int, db: Session = Depends(get_db)):
     topic = get_topic(db, topic_id)
     if topic is None:
         raise HTTPException(status_code=404, detail="Topic not found")
+    if is_forbidden_topic(topic.title):
+        raise HTTPException(status_code=400, detail="该话题涉及政治或公共事务，不支持 AI 营销分析")
     return analyze_topic(db, topic)
 
 
@@ -24,6 +27,8 @@ async def recommend(topic_id: int, request: Request, db: Session = Depends(get_d
     topic = get_topic(db, topic_id)
     if topic is None:
         raise HTTPException(status_code=404, detail="Topic not found")
+    if is_forbidden_topic(topic.title):
+        raise HTTPException(status_code=400, detail="该话题涉及政治或公共事务，不支持 AI 营销分析")
     user = get_or_create_user(db, user_from_request(request))
     try:
         return await recommend_for_topic(db, topic, user)

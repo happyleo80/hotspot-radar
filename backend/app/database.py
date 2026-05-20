@@ -99,6 +99,13 @@ def ensure_runtime_schema() -> None:
         for name, definition in usage_columns.items():
             if name not in existing_usage:
                 conn.execute(text(f"ALTER TABLE ai_usage_logs ADD COLUMN {name} {definition}"))
+        recommendation_columns = {
+            "is_favorite": "INTEGER DEFAULT 0",
+        }
+        existing_recommendations = {row[1] for row in conn.execute(text("PRAGMA table_info(topic_recommendations)"))}
+        for name, definition in recommendation_columns.items():
+            if name not in existing_recommendations:
+                conn.execute(text(f"ALTER TABLE topic_recommendations ADD COLUMN {name} {definition}"))
 
 
 def get_db():

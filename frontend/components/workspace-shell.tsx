@@ -1,15 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BarChart3, BrainCircuit, FileText, Folder, Home, LogOut, Search, Settings, Sparkles } from "lucide-react";
+import { BarChart3, BrainCircuit, Folder, LogOut, Search, Settings, Sparkles } from "lucide-react";
 import { api, clearAuthToken, UserAccount } from "@/lib/api";
 
-const navItems = [
-  { href: "", label: "工作台", icon: <Home size={19} /> },
+const primaryNavItems = [
   { href: "/topics-library", label: "我的话题库", icon: <Folder size={19} /> },
-  { href: "/cases-admin", label: "AI营销知识", icon: <BrainCircuit size={19} /> },
-  { href: "/records", label: "生成记录", icon: <FileText size={19} /> },
-  { href: "/usage", label: "用量统计", icon: <BarChart3 size={19} /> },
+  { href: "/usage", label: "用量统计", icon: <BarChart3 size={19} /> }
+];
+
+const moduleNavItems = [
+  { href: "/cases-admin", label: "AI营销知识", icon: <BrainCircuit size={19} /> }
+];
+
+const bottomNavItems = [
   { href: "/settings", label: "账户设置", icon: <Settings size={19} /> }
 ];
 
@@ -37,24 +41,21 @@ export function WorkspaceShell({ active, children }: { active: string; children:
             <div className="text-xs text-slate-500">热点营销策划工作台</div>
           </div>
         </div>
-        <nav className="mt-4 space-y-2 px-3 text-sm">
-          {navItems.map((item) => (
-            item.href ? (
-              <a
-                key={item.label}
-                className={`flex h-12 items-center gap-3 rounded-xl px-5 font-medium ${active === item.href ? "bg-blue-50 text-blue-600" : "text-slate-700 hover:bg-slate-50"}`}
-                href={item.href}
-              >
-                {item.icon}
-                {item.label}
-              </a>
-            ) : (
-              <div key={item.label} className="flex h-12 items-center gap-3 rounded-xl bg-blue-50 px-5 font-medium text-blue-600">
-                {item.icon}
-                {item.label}
-              </div>
-            )
-          ))}
+        <nav className="mt-4 flex h-[calc(100vh-112px)] flex-col px-3 text-sm">
+          <div className="space-y-2">
+            {primaryNavItems.map((item) => (
+              <SideNavItem key={item.label} item={item} active={active} />
+            ))}
+            <div className="px-5 pb-1 pt-5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">功能模块</div>
+            {moduleNavItems.map((item) => (
+              <SideNavItem key={item.label} item={item} active={active} />
+            ))}
+          </div>
+          <div className="mt-auto border-t border-[#eef2f7] pt-3">
+            {bottomNavItems.map((item) => (
+              <SideNavItem key={item.label} item={item} active={active} />
+            ))}
+          </div>
         </nav>
       </aside>
       <section className="min-h-screen lg:pl-[248px]">
@@ -71,7 +72,7 @@ export function WorkspaceShell({ active, children }: { active: string; children:
               <div className="font-semibold">{account?.name || "当前用户"}</div>
               <div className="text-xs text-slate-500">{account?.points_balance ?? 0} 积分</div>
             </div>
-            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-slate-900 to-slate-500" />
+            <Avatar account={account} />
             <button onClick={logout} className="inline-flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-blue-600">
               <LogOut size={17} /> 退出
             </button>
@@ -80,5 +81,34 @@ export function WorkspaceShell({ active, children }: { active: string; children:
         <div className="mx-auto max-w-[1440px] px-5 py-5 lg:px-8">{children}</div>
       </section>
     </main>
+  );
+}
+
+function SideNavItem({
+  item,
+  active
+}: {
+  item: { href: string; label: string; icon: React.ReactNode };
+  active: string;
+}) {
+  return (
+    <a
+      className={`flex h-12 items-center gap-3 rounded-xl px-5 font-medium ${active === item.href ? "bg-blue-50 text-blue-600" : "text-slate-700 hover:bg-slate-50"}`}
+      href={item.href}
+    >
+      {item.icon}
+      {item.label}
+    </a>
+  );
+}
+
+function Avatar({ account }: { account: UserAccount | null }) {
+  if (account?.avatar_url) {
+    return <img className="h-10 w-10 rounded-full object-cover" src={account.avatar_url} alt={account.name} />;
+  }
+  return (
+    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-slate-900 to-slate-500 text-sm font-semibold text-white">
+      {(account?.name || "用").slice(0, 1)}
+    </div>
   );
 }

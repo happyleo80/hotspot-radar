@@ -5,9 +5,7 @@ import {
   BarChart3,
   BrainCircuit,
   Download,
-  FileText,
   Folder,
-  Home,
   LogOut,
   RefreshCw,
   Search,
@@ -16,6 +14,7 @@ import {
 } from "lucide-react";
 import { api, clearAuthToken, Resonance, Topic, TopicRecommendation, TopicStats, UserAccount } from "@/lib/api";
 import { formatHeat } from "@/lib/utils";
+import { highRiskTitle, isForbiddenTopic } from "@/lib/topic-policy";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -138,13 +137,16 @@ export function Dashboard() {
             <div className="text-xs text-slate-500">热点营销策划工作台</div>
           </div>
         </div>
-        <nav className="mt-4 space-y-2 px-3 text-sm">
-          <SideLink active icon={<Home size={19} />} label="工作台" />
-          <SideLink icon={<Folder size={19} />} label="我的话题库" href="/topics-library" />
-          <SideLink icon={<BrainCircuit size={19} />} label="AI营销知识" href="/cases-admin" />
-          <SideLink icon={<FileText size={19} />} label="生成记录" href="/records" />
-          <SideLink icon={<BarChart3 size={19} />} label="用量统计" href="/usage" />
-          <SideLink icon={<Settings size={19} />} label="账户设置" href="/settings" />
+        <nav className="mt-4 flex h-[calc(100vh-112px)] flex-col px-3 text-sm">
+          <div className="space-y-2">
+            <SideLink icon={<Folder size={19} />} label="我的话题库" href="/topics-library" />
+            <SideLink icon={<BarChart3 size={19} />} label="用量统计" href="/usage" />
+            <div className="px-5 pb-1 pt-5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">功能模块</div>
+            <SideLink icon={<BrainCircuit size={19} />} label="AI营销知识" href="/cases-admin" />
+          </div>
+          <div className="mt-auto border-t border-[#eef2f7] pt-3">
+            <SideLink icon={<Settings size={19} />} label="账户设置" href="/settings" />
+          </div>
         </nav>
       </aside>
 
@@ -162,7 +164,7 @@ export function Dashboard() {
               <div className="font-semibold">{account?.name || "当前用户"}</div>
               <div className="text-xs text-slate-500">{account?.points_balance ?? 0} 积分</div>
             </div>
-            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-slate-900 to-slate-500" />
+            <Avatar account={account} />
             <button onClick={logout} className="inline-flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-blue-600">
               <LogOut size={17} /> 退出
             </button>
@@ -300,7 +302,24 @@ export function Dashboard() {
               <div className="border-b border-[#edf1f6] px-5 py-4"><h2 className="text-base font-semibold">AI 推荐结果</h2></div>
               <CardContent>
                 {recommendation ? (
-                  <pre className="max-h-[260px] overflow-auto whitespace-pre-wrap rounded-lg bg-slate-950 p-4 text-sm leading-6 text-white">{recommendation.recommendation}</pre>
+                  <div className="space-y-3">
+                    <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-xs leading-5 text-blue-700">
+                      已调用 DeepSeek 生成，并引用案例知识库 {recommendation.case_refs?.length || 0} 个案例。
+                      {recommendation.model ? <span> 模型：{recommendation.model}</span> : null}
+                    </div>
+                    {(recommendation.case_refs || []).length ? (
+                      <div className="grid gap-2">
+                        {recommendation.case_refs?.slice(0, 3).map((item) => (
+                          <div key={item.id} className="rounded-lg border border-[#edf1f6] p-3 text-xs text-slate-600">
+                            <div className="font-medium text-slate-900">案例 #{item.case_id} · 匹配 {Math.round((item.match_score || 0) * 100)}%</div>
+                            {item.match_reason ? <p className="mt-1">{item.match_reason}</p> : null}
+                            {item.used_insight ? <p className="mt-1 text-slate-500">启发：{item.used_insight}</p> : null}
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                    <pre className="max-h-[260px] overflow-auto whitespace-pre-wrap rounded-lg bg-slate-950 p-4 text-sm leading-6 text-white">{recommendation.recommendation}</pre>
+                  </div>
                 ) : (
                   <p className="text-sm leading-6 text-slate-500">点击任意热点的 AI建议，系统会调用案例库和 Deepseek 生成策划建议。</p>
                 )}
@@ -377,16 +396,19 @@ function Status({ topic, analyzed }: { topic: Topic; analyzed: boolean }) {
   return <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-600">可分析</span>;
 }
 
-function isForbiddenTopic(title: string) {
-  return /(政治|政府|外交|总统|首相|大选|选举|议会|国会|战争|军事|军方|军演|国防|制裁|领土|边境|台湾|香港|澳门|涉政|官员|纪委|反腐|法院|检察院|公安|警方|警察|刑拘|逮捕|判刑|死刑|枪击|恐袭|暴乱|抗议|游行|特朗普|拜登|普京|泽连斯基|以色列|伊朗|乌克兰|俄罗斯|巴勒斯坦|中美)/.test(title);
-}
-
-function highRiskTitle(title: string) {
-  return /(起诉|退款|投诉|偷拍|违法|谣言|造谣|被罚|翻车|争议|道歉)/.test(title);
-}
-
 function platformName(platform: string) {
   return platforms.find((item) => item.id === platform)?.label || platform;
+}
+
+function Avatar({ account }: { account: UserAccount | null }) {
+  if (account?.avatar_url) {
+    return <img className="h-10 w-10 rounded-full object-cover" src={account.avatar_url} alt={account.name} />;
+  }
+  return (
+    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-slate-900 to-slate-500 text-sm font-semibold text-white">
+      {(account?.name || "用").slice(0, 1)}
+    </div>
+  );
 }
 
 function friendlyApiError(error: unknown) {

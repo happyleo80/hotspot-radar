@@ -183,6 +183,7 @@ export type TopicRecommendation = {
   recommendation: string;
   points_used: number;
   model: string;
+  is_favorite: number;
   created_at: string;
   case_refs?: TopicRecommendationCaseRef[];
 };
@@ -275,7 +276,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     clearAuthToken();
     throw new Error("AUTH_REQUIRED");
   }
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  if (!res.ok) {
+    let detail = "";
+    try {
+      const payload = await res.json();
+      detail = typeof payload?.detail === "string" ? payload.detail : "";
+    } catch {
+      detail = "";
+    }
+    throw new Error(detail || `${res.status} ${res.statusText}`);
+  }
   return res.json();
 }
 
@@ -303,6 +313,12 @@ export const api = {
   account: () => request<UserAccount>("/api/users/me"),
   myPermissions: () => request<{ role: string; permissions: string[] }>("/api/users/me/permissions"),
   myRecommendations: () => request<TopicRecommendation[]>("/api/users/me/recommendations"),
+  updateRecommendationFavorite: (id: number, isFavorite: boolean) =>
+    request<TopicRecommendation>(`/api/users/me/recommendations/${id}/favorite`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_favorite: isFavorite })
+    }),
   myUsage: () => request<AiUsage[]>("/api/users/me/usage"),
   cases: () => request<MarketingCase[]>("/api/cases"),
   caseDetail: (id: string | number) => request<MarketingCase>(`/api/cases/${id}`),
