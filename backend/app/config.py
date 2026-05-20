@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     feishu_app_secret: str | None = None
     feishu_redirect_uri: str | None = None
     admin_username: str = "admin"
-    admin_password: str = "admin123456"
+    admin_password: str = "admin1234"
     admin_open_ids: str = ""
     ai_topic_cost_points: int = 10
     digitaling_daily_import_enabled: bool = True
