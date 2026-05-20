@@ -3,7 +3,7 @@ from urllib.parse import urlencode
 from fastapi import APIRouter, Header, HTTPException, Query
 from fastapi.responses import RedirectResponse
 
-from app.config import get_settings
+from app.config import get_settings, is_auth_required
 from app.services.auth_service import (
     build_feishu_login_url,
     create_session,
@@ -19,9 +19,10 @@ router = APIRouter(prefix="/api/auth", tags=["登录认证"])
 @router.get("/config")
 def auth_config():
     settings = get_settings()
+    feishu_configured = bool(settings.feishu_app_id and settings.feishu_app_secret and settings.feishu_redirect_uri)
     return {
-        "auth_required": settings.auth_required,
-        "feishu_configured": bool(settings.feishu_app_id and settings.feishu_app_secret and settings.feishu_redirect_uri),
+        "auth_required": is_auth_required(settings),
+        "feishu_configured": feishu_configured,
     }
 
 
@@ -45,7 +46,7 @@ async def feishu_callback(code: str = Query(...), state: str = Query(...)):
 @router.get("/me")
 def me(authorization: str | None = Header(default=None)):
     settings = get_settings()
-    if not settings.auth_required:
+    if not is_auth_required(settings):
         return {"authenticated": True, "user": {"name": "开发模式", "open_id": "dev"}}
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated")

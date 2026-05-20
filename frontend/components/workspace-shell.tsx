@@ -61,7 +61,7 @@ export function WorkspaceShell({ active, children }: { active: string; children:
           </div>
           <div className="ml-4 flex items-center gap-4">
             <div className="hidden text-right text-sm sm:block">
-              <div className="font-semibold">{account?.name || "Leo"}</div>
+              <div className="font-semibold">{account?.name || "当前用户"}</div>
               <div className="text-xs text-slate-500">{account?.points_balance ?? 0} 积分</div>
             </div>
             <div className="h-10 w-10 rounded-full bg-gradient-to-br from-slate-900 to-slate-500" />

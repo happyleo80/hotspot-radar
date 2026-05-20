@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from app.config import get_settings
+from app.config import get_settings, is_auth_required
 from app.database import Base, SessionLocal, engine, ensure_runtime_schema
 from app.routers import ai, auth, cases, extension, import_export, jobs, topics, users
 from app.services.case_service import import_digitaling_cases
@@ -25,7 +25,7 @@ app.add_middleware(
 
 @app.middleware("http")
 async def require_auth(request: Request, call_next):
-    if not settings.auth_required:
+    if not is_auth_required(settings):
         return await call_next(request)
     path = request.url.path
     public_paths = ("/api/auth", "/health", "/docs", "/openapi.json", "/redoc")

@@ -45,3 +45,9 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+def is_auth_required(settings: Settings | None = None) -> bool:
+    current = settings or get_settings()
+    feishu_ready = bool(current.feishu_app_id and current.feishu_app_secret and current.feishu_redirect_uri)
+    return current.auth_required or feishu_ready

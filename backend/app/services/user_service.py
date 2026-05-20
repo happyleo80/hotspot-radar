@@ -3,7 +3,7 @@ from datetime import datetime
 from fastapi import HTTPException, Request
 from sqlalchemy.orm import Session
 
-from app.config import get_settings
+from app.config import get_settings, is_auth_required
 from app.models import UserAccount
 
 
@@ -42,7 +42,7 @@ ROLE_PERMISSIONS = {
 
 def user_from_request(request: Request) -> dict:
     user = getattr(request.state, "user", None)
-    if not user and not get_settings().auth_required:
+    if not user and not is_auth_required():
         return {"open_id": "dev", "union_id": "dev", "name": "开发模式", "email": None}
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
@@ -59,7 +59,8 @@ def get_or_create_user(db: Session, user_payload: dict) -> UserAccount:
     admin_ids = _admin_ids()
     is_env_admin = open_id in admin_ids or user_payload.get("union_id") in admin_ids
     is_first_user = db.query(UserAccount).count() == 0
-    default_role = "super_admin" if (not get_settings().auth_required) or is_env_admin or (is_first_user and not admin_ids) else "viewer"
+    auth_required = is_auth_required()
+    default_role = "super_admin" if (not auth_required) or is_env_admin or (is_first_user and not admin_ids) else "viewer"
 
     if user is None:
         user = UserAccount(
@@ -83,7 +84,7 @@ def get_or_create_user(db: Session, user_payload: dict) -> UserAccount:
     user.name = user_payload.get("name") or user.name
     user.email = user_payload.get("email") or user.email
     user.avatar_url = user_payload.get("avatar_url") or user.avatar_url
-    if (not get_settings().auth_required or is_env_admin) and user.role not in {"admin", "super_admin"}:
+    if ((not is_auth_required()) or is_env_admin) and user.role not in {"admin", "super_admin"}:
         user.role = "super_admin"
         user.permissions = ",".join(ROLE_PERMISSIONS["super_admin"])
     if not user.role:
@@ -120,7 +121,7 @@ def require_admin(user_payload: dict, db: Session | None = None) -> None:
         if has_permission(user, "admin_access") or has_permission(user, "user_manage"):
             return
     admin_ids = _admin_ids()
-    if not admin_ids and not get_settings().auth_required:
+    if not admin_ids and not is_auth_required():
         return
     if user_payload.get("open_id") not in admin_ids and user_payload.get("union_id") not in admin_ids:
         raise HTTPException(status_code=403, detail="Admin permission required")

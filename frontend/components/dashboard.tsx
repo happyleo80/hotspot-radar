@@ -137,7 +137,7 @@ export function Dashboard() {
           </div>
           <div className="ml-4 flex items-center gap-4">
             <div className="hidden text-right text-sm sm:block">
-              <div className="font-semibold">{account?.name || "Leo"}</div>
+              <div className="font-semibold">{account?.name || "当前用户"}</div>
               <div className="text-xs text-slate-500">{account?.points_balance ?? 0} 积分</div>
             </div>
             <div className="h-10 w-10 rounded-full bg-gradient-to-br from-slate-900 to-slate-500" />
@@ -150,7 +150,7 @@ export function Dashboard() {
         <div className="mx-auto max-w-[1440px] px-5 py-5 lg:px-8">
           <section className="relative overflow-hidden rounded-2xl border border-[#dce7fb] bg-gradient-to-r from-[#d8eaff] via-[#eef2ff] to-[#e5d8ff] px-8 py-8">
             <div className="relative z-[1] max-w-3xl">
-              <p className="text-base font-semibold">你好，{account?.name || "Leo"}</p>
+              <p className="text-base font-semibold">你好，{account?.name || "当前用户"}</p>
               <h1 className="mt-3 text-3xl font-semibold tracking-normal lg:text-4xl">把一个热点 Idea，扩展成完整的营销策划逻辑</h1>
               <p className="mt-4 text-sm leading-6 text-slate-700">
                 聚合微博、抖音、小红书、知乎、B站热点，自动匹配案例库，生成传播路径、内容矩阵、执行任务和风险边界。

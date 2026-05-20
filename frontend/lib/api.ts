@@ -220,10 +220,22 @@ export type AdminSettings = {
 };
 
 function getApiBase() {
-  if (process.env.NEXT_PUBLIC_API_BASE) return process.env.NEXT_PUBLIC_API_BASE;
   if (typeof window !== "undefined") {
+    const configured = process.env.NEXT_PUBLIC_API_BASE;
+    if (configured) {
+      try {
+        const configuredUrl = new URL(configured);
+        const browserHost = window.location.hostname;
+        const configuredIsLocal = ["localhost", "127.0.0.1", "::1"].includes(configuredUrl.hostname);
+        const browserIsLocal = ["localhost", "127.0.0.1", "::1"].includes(browserHost);
+        if (!configuredIsLocal || browserIsLocal) return configured;
+      } catch {
+        return configured;
+      }
+    }
     return `${window.location.protocol}//${window.location.hostname}:8000`;
   }
+  if (process.env.NEXT_PUBLIC_API_BASE) return process.env.NEXT_PUBLIC_API_BASE;
   return "http://localhost:8000";
 }
 
