@@ -114,11 +114,17 @@ def list_topics(db: Session, platform: str | None = None, limit: int = 50) -> li
     if platform:
         query = query.filter(Topic.platform == platform)
     latest_collected_at = query.with_entities(func.max(Topic.collected_at)).scalar()
+    base_query = query
     if latest_collected_at:
         query = query.filter(Topic.collected_at >= latest_collected_at - timedelta(minutes=45))
+    order_by = (_source_priority(), Topic.rank.asc().nullslast(), desc(Topic.heat_score)) if platform else (_source_priority(), desc(Topic.heat_score), Topic.rank.asc().nullslast())
     if platform:
-        return query.order_by(_source_priority(), Topic.rank.asc().nullslast(), desc(Topic.heat_score)).limit(limit).all()
-    return query.order_by(_source_priority(), desc(Topic.heat_score), Topic.rank.asc().nullslast()).limit(limit).all()
+        rows = query.order_by(*order_by).limit(limit).all()
+    else:
+        rows = query.order_by(*order_by).limit(limit).all()
+    if rows:
+        return rows
+    return base_query.order_by(*order_by).limit(limit).all()
 
 
 def _source_priority():

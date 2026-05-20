@@ -45,8 +45,10 @@ export function Dashboard() {
 
   async function load(platform = active) {
     setLoading(true);
-    const [topicRows, resonanceRows, risingRows, valueRows, riskRows, accountRow, recommendationRows] = await Promise.all([
-      api.topics(platform === "all" ? undefined : platform).catch(() => []),
+    const [topicResult, resonanceRows, risingRows, valueRows, riskRows, accountRow, recommendationRows] = await Promise.all([
+      api.topics(platform === "all" ? undefined : platform)
+        .then((rows) => ({ rows, error: "" }))
+        .catch((error) => ({ rows: [] as Topic[], error: error instanceof Error ? error.message : "热点列表接口异常" })),
       api.resonance().catch(() => []),
       api.rising().catch(() => []),
       api.highValue().catch(() => []),
@@ -54,13 +56,17 @@ export function Dashboard() {
       api.account().catch(() => null),
       api.myRecommendations().catch(() => [])
     ]);
-    setTopics(topicRows);
+    const fallbackTopics = topicResult.rows.length ? topicResult.rows : topicsFromResonance(resonanceRows, platform);
+    setTopics(fallbackTopics);
     setResonance(resonanceRows);
     setRising(risingRows);
     setHighValue(valueRows);
     setHighRisk(riskRows);
     setAccount(accountRow);
     setAnalyzedTopicIds(new Set(recommendationRows.map((item) => item.topic_id)));
+    if (!topicResult.rows.length && fallbackTopics.length && topicResult.error) {
+      setRefreshMessage(`热点列表接口暂时异常，已用跨平台共振话题兜底展示。${topicResult.error}`);
+    }
     setLoading(false);
   }
 
@@ -365,4 +371,17 @@ function highRiskTitle(title: string) {
 
 function platformName(platform: string) {
   return platforms.find((item) => item.id === platform)?.label || platform;
+}
+
+function topicsFromResonance(rows: Resonance[], platform: string) {
+  const seen = new Set<number>();
+  return rows
+    .flatMap((item) => item.topics || [])
+    .filter((topic) => platform === "all" || topic.platform === platform)
+    .filter((topic) => {
+      if (seen.has(topic.id)) return false;
+      seen.add(topic.id);
+      return true;
+    })
+    .slice(0, 50);
 }
