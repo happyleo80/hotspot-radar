@@ -126,6 +126,24 @@ function CasesProductionCenter() {
 
         {message && <p className="mt-4 rounded-xl border border-[#e4eaf3] bg-white px-4 py-3 text-sm text-slate-600">{message}</p>}
 
+        {!cases.length ? (
+          <Card className="mt-5 rounded-2xl border-blue-100 bg-blue-50/70 shadow-none">
+            <CardContent className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h2 className="text-base font-semibold text-slate-950">线上案例库还没有初始化</h2>
+                <p className="mt-2 text-sm leading-6 text-slate-600">服务器使用的是新的数据库，本地案例不会随 Git 自动上传。请用有案例上传权限的账号初始化 100 篇营销案例。</p>
+              </div>
+              {hasPermission(permissions, "case_upload") ? (
+                <Button className="shrink-0 bg-blue-600 hover:bg-blue-700" onClick={importCases} disabled={busy === "import"}>
+                  {busy === "import" ? "正在初始化..." : "初始化100个营销案例"}
+                </Button>
+              ) : (
+                <p className="shrink-0 rounded-xl bg-white px-4 py-3 text-sm text-slate-500">当前账号只有浏览权限，请联系管理员开通案例上传权限。</p>
+              )}
+            </CardContent>
+          </Card>
+        ) : null}
+
         <div className="mt-5 flex gap-2 overflow-x-auto">
           {tabs.map((tab) => (
             <button key={tab} onClick={() => setActiveTab(tab)} className={`h-10 shrink-0 rounded-lg px-4 text-sm font-medium ${activeTab === tab ? "bg-blue-600 text-white" : "border border-[#e3e8f2] bg-white text-slate-700"}`}>
